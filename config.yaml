@@ -1,0 +1,14 @@
+tgs:
+    cooldown:
+        path: 'data/tgs/Cu_cooldown'
+        temperature_path: data/temperature/Cu_temperature.csv
+        grating: 3.5276
+    irradiation:
+        path: 'data/tgs/Cu_irradiation'
+        srim_path: 'data/srim/VACANCY.txt'
+        grating: 3.5276
+        start_current: 1.0e-9 # A
+        end_current: 0.1e-9 # A
+        ion_charge: 6 # e
+        beam_aperture: 2.00 # mm
+        duration: 2100 # s

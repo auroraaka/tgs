@@ -1,6 +1,6 @@
 # Transient Grating Spectroscopy Analysis Tool
 
-A repository designed for analyzing transient grating spectroscopy data. It provides tools for processing raw signals and extracting thermo-mechanical material properties through fitting and analysis techniques.
+A repository designed for analyzing transient grating spectroscopy data. This tool enables processing raw signals and extracting thermo-mechanical material properties through analysis and fitting techniques.
 
 ## Prerequisites
 

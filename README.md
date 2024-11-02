@@ -68,8 +68,9 @@ tgs/
 │   ├── visualization/      
 │   │   ├── plots.py        # Plotting functions
 ├── tests/                  
-├── .gitignore              # Git ignore file
-├── config.yaml             # Configuration file
+├── .gitignore              # Git ignore
+├── config.yaml             # Configuration
+├── LICENSE.txt             # License
 ├── main.py                 # Main script
 ├── README.md               # README file
 ├── requirements.txt        # Dependencies

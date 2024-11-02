@@ -54,3 +54,18 @@ def get_file_prefix(path: str, i: int) -> str:
         if match := pattern.match(filename):
             return match.group(1)
     return None
+
+def get_file_idx(filename: str) -> int:
+    """
+    Extract the index from a positive signal filename.
+
+    Parameters:
+        filename (str): path to the positive signal file (e.g., 'data/raw/Cu110-POS-1.txt')
+    Returns:
+        int: index number from the filename, or None if no match is found
+    """
+    basename = os.path.basename(filename)
+    pattern = re.compile(r'.*-POS-(\d+)\.txt$')
+    if match := pattern.match(basename):
+        return int(match.group(1))
+    return None

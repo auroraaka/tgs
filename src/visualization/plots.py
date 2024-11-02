@@ -7,32 +7,26 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from matplotlib import pyplot as plt
+from pathlib import Path
 
-from tgs import tgs_function
+from src.analysis.functions import tgs_function
 
 matplotlib.rcParams['font.family'] = 'Times New Roman'
 matplotlib.rcParams['font.sans-serif'] = ['Times New Roman']
 
 
-def plot_time_vs_response(fit_data, x_raw, y_raw, x_fit, y_fit, idx):
-    
-    idx = idx - 1
-    param_keys = ['A[Wm^-2]', 'B[Wm^-2]', 'C[Wm^-2]', 'alpha[m^2s^-1]', 'beta[s^0.5]', 'theta', 'tau[s]', 'SAW_freq[Hz]']
-    fit_dict = fit_data.iloc[idx].to_dict()
-    fit_params = [float(fit_dict[key]) for key in param_keys]
-
-    start_time, grating = fit_dict['start_time'], fit_dict['grating_value[um]']
-    functional, thermal = tgs_function(start_time, grating)
-    x_raw, y_raw, x_fit, y_fit = np.array(x_raw[idx]), np.array(y_raw[idx]), np.array(x_fit[idx]), np.array(y_fit[idx])
+def plot_tgs(signal, truncated_signal, functional_fit, thermal_fit, fit_params, idx):
+    num_points = 1000
+    x_raw, y_raw = signal[:num_points, 0], signal[:num_points, 1]
+    x_fit = truncated_signal[:num_points, 0]
 
     plt.figure(figsize=(10, 6))
-    plt.plot(x_raw[:1000] * 1e9, y_raw[:1000] * 1e3, linestyle='-', color='black', linewidth=2, label='Raw Signal')
-    plt.plot(x_fit[:1000] * 1e9, functional(x_fit[:1000], *fit_params) * 1e3, linestyle='-', color='blue', linewidth=2, label='Functional Fit')
-    plt.plot(x_fit[:1000] * 1e9, thermal(x_fit[:1000], *fit_params) * 1e3, linestyle='-', color='red', linewidth=2, label='Thermal Fit')
+    plt.plot(x_raw * 1e9, y_raw * 1e3, linestyle='-', color='black', linewidth=2, label='Raw Signal')
+    plt.plot(x_fit * 1e9, functional_fit(x_fit, *fit_params) * 1e3, linestyle='-', color='blue', linewidth=2, label='Functional Fit')
+    plt.plot(x_fit * 1e9, thermal_fit(x_fit, *fit_params) * 1e3, linestyle='-', color='red', linewidth=2, label='Thermal Fit')
 
     plt.xlabel('Time [ns]', fontsize=16, labelpad=10)
     plt.ylabel('Heterodyne Diode Response [mV]', fontsize=16, labelpad=10)
-    plt.xlim(0, 20)
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
     plt.grid(True, which='both', linestyle='--', linewidth=0.75)
@@ -42,7 +36,19 @@ def plot_time_vs_response(fit_data, x_raw, y_raw, x_fit, y_fit, idx):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plt.tight_layout()
-    plt.savefig('figures/time_vs_response.png', dpi=600)
+    
+    save_dir = Path('figures') / 'tgs'
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_path = save_dir / f'tgs-{idx:04d}.png'
+    plt.savefig(save_path, dpi=600)
+
+def plot_fft():
+    pass
+
+def plot_lorentzian():
+    pass
+
+
 
 def create_app(postfit_data, prefit_data, x_raw, y_raw, x_fit, y_fit):
     app = dash.Dash(__name__)

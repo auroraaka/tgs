@@ -1,78 +1,15 @@
 from typing import Tuple, Union
 
 import numpy as np
-from scipy.special import erfc
 from scipy.optimize import curve_fit
 
-from process import process_signal
-from lorentzian import lorentzian_fit
-from fft import fft
+from src.core.process import process_signal
+from src.analysis.functions import tgs_function
+from src.analysis.lorentzian import lorentzian_fit
+from src.analysis.fft import fft
+from src.visualization.plots import plot_tgs
+from src.utils.utils import get_file_idx
 
-def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, callable]:
-    """
-    Build functional and thermal fit functions.
-
-    Parameters:
-        start_time (float): start time of TGS data [s] # TODO: check units
-        grating_spacing (float): grating spacing of TGS probe [µm]
-
-    Returns:
-        Tuple[callable, callable]: (functional fit, thermal fit)
-    """
-    q = 2 * np.pi / (grating_spacing * 1e-6)
-
-    def functional_fit(x, A, B, C, alpha, beta, theta, tau, f, q=q):
-        """
-        Functional fit function.
-
-        Equation:
-            I(t) = A [erfc(q √(αt)) - (β/√t) e^(-q²αt)] + B sin(2πft + Θ) e^(-t/τ) + C
-
-        Parameters:
-            x (np.ndarray): time array [s] # TODO: check units
-            A (float): constant [V] # TODO: check units
-            B (float): constant [V] # TODO: check units
-            C (float): constant [V] # TODO: check units
-            alpha (α) (float): thermal diffusivity [m²/s] # TODO: check units
-            beta (β) (float): displacement-reflectance ratio [dimensionless] # TODO: check units
-            theta (Θ) (float): acoustic phase [rad] # TODO: check units
-            tau (τ) (float): acoustic decay constant [s] # TODO: check units
-            f (float): surface acoustic wave frequency [Hz] # TODO: check units
-            q (float): excitation wave vector [rad/m] # TODO: check units
-
-        Returns:
-            np.ndarray: functional fit response [V] # TODO: check units
-        """
-        t = x + start_time
-        displacement_field = erfc(q * np.sqrt(alpha * t))
-        thermal_field = beta / np.sqrt(t) * np.exp(-q ** 2 * alpha * t)
-        sinusoid = np.sin(2 * np.pi * f * t + theta) * np.exp(-t / tau)
-        return A * (displacement_field + thermal_field) + B * sinusoid + C
-
-    def thermal_fit(x, A, B, C, alpha, beta, theta, tau, f, q=q):
-        """
-        Thermal fit function.
-
-        Equation:
-            I(t) = A [erfc(q √(αt)) - (β/√t) e^(-q²αt)] + C
-
-        Parameters:
-            x (np.ndarray): time array [s] # TODO: check units
-            A (float): constant [V] # TODO: check units
-            C (float): constant [V] # TODO: check units
-            alpha (α) (float): thermal diffusivity [m²/s] # TODO: check units
-            beta (β) (float): thermal conductivity [W/(m·K)] # TODO: check units
-            q (float): excitation wave vector [rad/m] # TODO: check units
-
-        Returns:
-            np.ndarray: thermal fit response [V] # TODO: check units
-        """
-        t = x + start_time
-        displacement_field = erfc(q * np.sqrt(alpha * t))
-        thermal_field = beta / np.sqrt(t) * np.exp(-q ** 2 * alpha * t)
-        return A * (displacement_field + thermal_field) + C
-
-    return functional_fit, thermal_fit
 
 def tgs_fit(config: dict, pos_file: str, neg_file: str, grating_spacing: float, plot: bool = False) -> Tuple[Union[float, np.ndarray]]:
     """
@@ -149,5 +86,8 @@ def tgs_fit(config: dict, pos_file: str, neg_file: str, grating_spacing: float, 
     popt, pcov = curve_fit(functional_fit, signal[start_idx:, 0], signal[start_idx:, 1], p0=functional_p0, maxfev=10000)
     A, B, C, alpha, beta, theta, tau, f = popt
     A_err, B_err, C_err, alpha_err, beta_err, theta_err, tau_err, f_err = np.sqrt(np.diag(pcov))
-    
+
+    if plot:
+        plot_tgs(signal, signal[start_idx:], functional_fit, thermal_fit, popt, get_file_idx(pos_file))
+
     return start_time, grating_spacing, A, A_err, B, B_err, C, C_err, alpha, alpha_err, beta, beta_err, theta, theta_err, tau, tau_err, f, f_err, signal, signal[start_idx:]

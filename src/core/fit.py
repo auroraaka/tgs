@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from tgs import tgs_fit
-from utils import get_num_signals, get_file_prefix
+from src.analysis.tgs import tgs_fit
+from src.utils.utils import get_num_signals, get_file_prefix
 
 @dataclass
 class DataPaths:

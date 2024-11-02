@@ -3,24 +3,7 @@ from typing import List, Tuple, Union
 import numpy as np
 from scipy.optimize import curve_fit
 
-def lorentzian_function(x: np.ndarray, A: float, x0: float, W: float, C: float) -> np.ndarray:
-    """
-    Lorentzian function for peak fitting.
-
-    Equation:
-        L(x) = A / ((x - x0)² + W²) + C
-
-    Parameters:
-        x (np.ndarray): frequency array [GHz]
-        A (float): amplitude of the peak
-        x0 (float): center frequency [GHz]
-        W (float): peak width parameter [GHz]
-        C (float): vertical offset
-
-    Returns:
-        np.ndarray: Lorentzian function values
-    """
-    return A / ((x - x0) ** 2 + W ** 2) + C
+from src.analysis.functions import lorentzian_function
 
 def lorentzian_fit(fft: np.ndarray, signal_proportion: float = 1.0, frequency_bounds: List[Union[float, float]] = [0.1, 0.9], dc_filter_range: List[Union[int, int]] = [0, 12000], bimodal_fit: bool = False, plot: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
     """

@@ -1,11 +1,6 @@
 # Path
 path: data  # directory containing input files
 
-# TGS Fitting
-tgs:
-  grating_spacing: 3.5276  # TGS probe grating spacing [µm]
-  plot: false  # enable/disable fit visualization
-
 # Signal Processing
 process:
   heterodyne: di-homodyne  # detection method: 'di-homodyne' or 'mono-homodyne'
@@ -27,3 +22,8 @@ lorentzian:
   dc_filter_range: [0, 12000]  # DC filtering range [Hz]
   bimodal_fit: false  # enable bimodal Lorentzian fitting
   plot: false  # enable/disable fit visualization
+
+# TGS Fitting
+tgs:
+  grating_spacing: 3.5276  # TGS probe grating spacing [µm]
+  plot: true  # enable/disable fit visualization

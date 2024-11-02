@@ -2,7 +2,7 @@ from typing import Tuple
 import numpy as np
 from scipy.signal import find_peaks
 
-from utils import read_data
+from src.utils.utils import read_data
 
 PROMINENCE_FACTOR = 5
 INITIAL_SAMPLES = 50

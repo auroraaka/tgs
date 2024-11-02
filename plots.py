@@ -1,38 +1,38 @@
-import dash
+import matplotlib
 import numpy as np
-import plotly.graph_objects as go
+
+import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output, State
-from matplotlib import pyplot as plt
+import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from matplotlib import pyplot as plt
 
-from utils import tgs_function
+from tgs import tgs_function
 
-import matplotlib
 matplotlib.rcParams['font.family'] = 'Times New Roman'
 matplotlib.rcParams['font.sans-serif'] = ['Times New Roman']
 
 
-def plot_time_vs_response(postfit, prefit, x_raw, y_raw, x_fit, y_fit, idx):
+def plot_time_vs_response(fit_data, x_raw, y_raw, x_fit, y_fit, idx):
     
     idx = idx - 1
     param_keys = ['A[Wm^-2]', 'B[Wm^-2]', 'C[Wm^-2]', 'alpha[m^2s^-1]', 'beta[s^0.5]', 'theta', 'tau[s]', 'SAW_freq[Hz]']
-    postfit_dict = postfit.iloc[idx].to_dict()
-    postfit_params = [float(postfit_dict[key]) for key in param_keys]
+    fit_dict = fit_data.iloc[idx].to_dict()
+    fit_params = [float(fit_dict[key]) for key in param_keys]
 
-    start_time, grating = postfit_dict['start_time'], postfit_dict['grating_value[um]']
+    start_time, grating = fit_dict['start_time'], fit_dict['grating_value[um]']
     functional, thermal = tgs_function(start_time, grating)
     x_raw, y_raw, x_fit, y_fit = np.array(x_raw[idx]), np.array(y_raw[idx]), np.array(x_fit[idx]), np.array(y_fit[idx])
 
     plt.figure(figsize=(10, 6))
     plt.plot(x_raw[:1000] * 1e9, y_raw[:1000] * 1e3, linestyle='-', color='black', linewidth=2, label='Raw Signal')
-    plt.plot(x_fit[:1000] * 1e9, functional(x_fit[:1000], *postfit_params) * 1e3, linestyle='-', color='blue', linewidth=2, label='Functional Fit')
-    plt.plot(x_fit[:1000] * 1e9, thermal(x_fit[:1000], *postfit_params) * 1e3, linestyle='-', color='red', linewidth=2, label='Thermal Fit')
+    plt.plot(x_fit[:1000] * 1e9, functional(x_fit[:1000], *fit_params) * 1e3, linestyle='-', color='blue', linewidth=2, label='Functional Fit')
+    plt.plot(x_fit[:1000] * 1e9, thermal(x_fit[:1000], *fit_params) * 1e3, linestyle='-', color='red', linewidth=2, label='Thermal Fit')
 
     plt.xlabel('Time [ns]', fontsize=16, labelpad=10)
     plt.ylabel('Heterodyne Diode Response [mV]', fontsize=16, labelpad=10)
     plt.xlim(0, 20)
-    plt.ylim(-10, 130)
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
     plt.grid(True, which='both', linestyle='--', linewidth=0.75)
@@ -106,6 +106,6 @@ def create_app(postfit_data, prefit_data, x_raw, y_raw, x_fit, y_fit):
 
     return app
 
-def plot_fits_interactive(postfit, prefit, x_raw, y_raw, x_fit, y_fit):
+def plot_interactive(postfit, prefit, x_raw, y_raw, x_fit, y_fit):
     app = create_app(postfit, prefit, x_raw, y_raw, x_fit, y_fit) 
     app.run_server(debug=True)

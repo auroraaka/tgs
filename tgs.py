@@ -1,144 +1,153 @@
-import os
-import re
-from typing import Any, List, Tuple
+from typing import Tuple, Union
 
-import matlab.engine
 import numpy as np
-import pandas as pd
-import scipy
+from scipy.special import erfc
+from scipy.optimize import curve_fit
 
-from utils import save_csv, save_json, tgs_function
+from process import process_signal
+from lorentzian import lorentzian_fit
+from fft import fft
 
-class TGS:
-    def __init__(self, config: dict[str, Any]) -> None:
-        self.grating = config['grating']
-        self.path = config['path']
-        self.raw_path = os.path.join(self.path, 'raw')
-        self.fit_path = os.path.join(self.path, 'fit')
-        self.prefit_path = os.path.join(self.fit_path, 'prefit.csv')
-        self.postfit_path = os.path.join(self.fit_path, 'postfit.csv')
-        self.x_raw_path = os.path.join(self.fit_path, 'x_raw.json')
-        self.y_raw_path = os.path.join(self.fit_path, 'y_raw.json')
-        self.x_fit_path = os.path.join(self.fit_path, 'x_fit.json')
-        self.y_fit_path = os.path.join(self.fit_path, 'y_fit.json')
+def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, callable]:
+    """
+    Build functional and thermal fit functions.
 
-        self.eng = matlab.engine.start_matlab()
-        self.eng.cd(os.getcwd())
+    Parameters:
+        start_time (float): start time of TGS data [s] # TODO: check units
+        grating_spacing (float): grating spacing of TGS probe [µm]
 
-    def tgs_phase_analysis(self, pos_file: str, neg_file: str,
-                           pos_baseline: float, neg_baseline: float, verbose: int = 0) -> Tuple[pd.DataFrame, List[float], List[float]]:
-        run_name = os.path.basename(pos_file)
-        output = self.eng.TGSPhaseAnalysis(pos_file, neg_file, self.grating, 2, 0, 0, pos_baseline, neg_baseline,
-                                           '', verbose, 16, 0, 0, nargout=22)
+    Returns:
+        Tuple[callable, callable]: (functional fit, thermal fit)
+    """
+    q = 2 * np.pi / (grating_spacing * 1e-6)
 
-        freq, freq_err, speed, alpha, alpha_err, tau, tau_err, A, A_err, beta, beta_err, B, B_err, theta, theta_err, C, C_err, start_time, x_raw, y_raw, x_fit, y_fit = output
-        tau = np.asarray(tau)[0][2]
-        x_raw = list(np.array(x_raw).squeeze(1))
-        y_raw = list(np.array(y_raw).squeeze(1))
-        x_fit = list(np.array(x_fit).squeeze(1))
-        y_fit = list(np.array(y_fit).squeeze(1))
+    def functional_fit(x, A, B, C, alpha, beta, theta, tau, f, q=q):
+        """
+        Functional fit function.
 
-        data = {
-            'run_name': run_name,
-            'grating_value[um]': self.grating,
-            'SAW_freq[Hz]': freq,
-            'SAW_freq_error[Hz]': freq_err,
-            'SAW_speed[m/s]': speed,
-            'A[Wm^-2]': A,
-            'A_err[Wm^-2]': A_err,
-            'alpha[m^2s^-1]': alpha,
-            'alpha_err[m^2s^-1]': alpha_err,
-            'beta[s^0.5]': beta,
-            'beta_err[s^0.5]': beta_err,
-            'B[Wm^-2]': B,
-            'B_err[Wm^-2]': B_err,
-            'theta': theta,
-            'theta_err': theta_err,
-            'tau[s]': tau,
-            'tau_err[s]': tau_err,
-            'C[Wm^-2]': C,
-            'C_err[Wm^-2]': C_err,
-            'start_time': start_time,
-        }
+        Equation:
+            I(t) = A [erfc(q √(αt)) - (β/√t) e^(-q²αt)] + B sin(2πft + Θ) e^(-t/τ) + C
 
-        return pd.DataFrame([data]), x_raw, y_raw, x_fit, y_fit
+        Parameters:
+            x (np.ndarray): time array [s] # TODO: check units
+            A (float): constant [V] # TODO: check units
+            B (float): constant [V] # TODO: check units
+            C (float): constant [V] # TODO: check units
+            alpha (α) (float): thermal diffusivity [m²/s] # TODO: check units
+            beta (β) (float): displacement-reflectance ratio [dimensionless] # TODO: check units
+            theta (Θ) (float): acoustic phase [rad] # TODO: check units
+            tau (τ) (float): acoustic decay constant [s] # TODO: check units
+            f (float): surface acoustic wave frequency [Hz] # TODO: check units
+            q (float): excitation wave vector [rad/m] # TODO: check units
 
-    def get_num_signals(self) -> int:
-        pattern = re.compile(r'POS-(\d+)\.txt')
-        return max((int(match.group(1)) for filename in os.listdir(self.raw_path)
-                    if (match := pattern.search(filename))), default=0)
+        Returns:
+            np.ndarray: functional fit response [V] # TODO: check units
+        """
+        t = x + start_time
+        displacement_field = erfc(q * np.sqrt(alpha * t))
+        thermal_field = beta / np.sqrt(t) * np.exp(-q ** 2 * alpha * t)
+        sinusoid = np.sin(2 * np.pi * f * t + theta) * np.exp(-t / tau)
+        return A * (displacement_field + thermal_field) + B * sinusoid + C
 
-    def get_file_prefix(self, i: int) -> str:
-        pattern = re.compile(rf'(.+)-POS-{i}\.txt')
-        for filename in os.listdir(self.raw_path):
-            if match := pattern.match(filename):
-                return match.group(1)
-        return None
+    def thermal_fit(x, A, B, C, alpha, beta, theta, tau, f, q=q):
+        """
+        Thermal fit function.
 
-    def fit(self, idxs: List[int] = None) -> None:
-        prefit_data = pd.DataFrame()
-        postfit_data = pd.DataFrame()
-        x_raw, y_raw, x_fit, y_fit = [], [], [], []
+        Equation:
+            I(t) = A [erfc(q √(αt)) - (β/√t) e^(-q²αt)] + C
 
-        if idxs is None:
-            num_signals = self.get_num_signals()
-            idxs = range(1, num_signals + 1)
+        Parameters:
+            x (np.ndarray): time array [s] # TODO: check units
+            A (float): constant [V] # TODO: check units
+            C (float): constant [V] # TODO: check units
+            alpha (α) (float): thermal diffusivity [m²/s] # TODO: check units
+            beta (β) (float): thermal conductivity [W/(m·K)] # TODO: check units
+            q (float): excitation wave vector [rad/m] # TODO: check units
 
-        for i in idxs:
-            print(f"Analyzing signal {i}")
+        Returns:
+            np.ndarray: thermal fit response [V] # TODO: check units
+        """
+        t = x + start_time
+        displacement_field = erfc(q * np.sqrt(alpha * t))
+        thermal_field = beta / np.sqrt(t) * np.exp(-q ** 2 * alpha * t)
+        return A * (displacement_field + thermal_field) + C
 
-            file_prefix = self.get_file_prefix(i)
-            if not file_prefix:
-                print(f"Could not find file prefix for signal {i}")
-                continue
+    return functional_fit, thermal_fit
 
-            pos_file = os.path.join(self.raw_path, f'{file_prefix}-POS-{i}.txt')
-            neg_file = os.path.join(self.raw_path, f'{file_prefix}-NEG-{i}.txt')
+def tgs_fit(config: dict, pos_file: str, neg_file: str, grating_spacing: float, plot: bool = False) -> Tuple[Union[float, np.ndarray]]:
+    """
+    Fit transient grating spectroscopy (TGS) response equation to experimentally collected signal.
 
-            try:
-                df, xr, yr, xf, yf = self.tgs_phase_analysis(pos_file, neg_file, 0, 0)
+    This function processes the input TGS signal, performs thermal and acoustic fits, and returns 
+    the fitted parameters along with their standard errors (1σ).
 
-                x_raw.append(xr)
-                y_raw.append(yr)
-                x_fit.append(xf)
-                y_fit.append(yf)
+    Parameters:
+        config (dict): configuration dictionary
+        pos_file (str): positive signal file path
+        neg_file (str): negative signal file path
+        grating_spacing (float): grating spacing of TGS probe [µm]
+        plot (bool, optional): whether to generate plots
 
-                prefit = df.iloc[0].to_dict()
-                arg_keys = ['A[Wm^-2]', 'B[Wm^-2]', 'C[Wm^-2]', 'alpha[m^2s^-1]', 'beta[s^0.5]', 'theta', 'tau[s]', 'SAW_freq[Hz]']
-                arg_err_keys = ['A_err[Wm^-2]', 'B_err[Wm^-2]', 'C_err[Wm^-2]', 'alpha_err[m^2s^-1]', 'beta_err[s^0.5]', 'theta_err', 'tau_err[s]', 'SAW_freq_error[Hz]']
-                arg_vals = [float(prefit[key]) for key in arg_keys]
+    Returns:
+        Tuple containing:
+            start_time (float): start time of the fit [s]
+            A (float): thermal signal amplitude [V]
+            A_err (float): thermal signal amplitude error [V]
+            B (float): acoustic signal amplitude [V]
+            B_err (float): acoustic signal amplitude error [V]
+            C (float): signal offset [V]
+            C_err (float): signal offset error [V]
+            alpha (float): thermal diffusivity [m²/s]
+            alpha_err (float): thermal diffusivity error [m²/s]
+            beta (float): displacement-reflectance ratio [dimensionless]
+            beta_err (float): displacement-reflectance ratio error [dimensionless]
+            theta (float): acoustic phase [rad]
+            theta_err (float): acoustic phase error [rad]
+            tau (float): acoustic decay time [s]
+            tau_err (float): acoustic decay time error [s]
+            f (float): surface acoustic wave frequency [Hz]
+            f_err (float): surface acoustic wave frequency error [Hz]
+            signal (np.ndarray): full processed signal [N, [time, amplitude]]
+            fitted_signal (np.ndarray): truncated signal used for fitting [M, [time, amplitude]]
 
-                start_time = float(prefit['start_time'])
-                tgs, _ = tgs_function(start_time, self.grating)
-                fit, cov = scipy.optimize.curve_fit(tgs, xf, yf, p0=arg_vals, maxfev=10000)
-                err = np.sqrt(np.diag(cov))
+    Notes:
+        The fitting process includes:
+            1. Initial thermal fit
+            2. FFT analysis and Lorentzian fit for acoustic parameters
+            3. Iterative beta fitting
+            4. Functional fit including thermal and acoustic components
+    """
+    # Process signal and build fit functions
+    signal, max_time, start_time, start_idx = process_signal(pos_file, neg_file, grating_spacing, **config['process'])
+    functional_fit, thermal_fit = tgs_function(start_time, grating_spacing)
 
-                postfit = prefit.copy()
-                for key, value in zip(arg_keys, fit):
-                    postfit[key] = value
-                for key, value in zip(arg_err_keys, err):
-                    postfit[key] = value
+    # Thermal fit
+    thermal_p0 = [0.05, 5e-6]
+    thermal_bounds = ([0, 0], [1, 5e-4])
+    popt, _ = curve_fit(lambda x, A, alpha: thermal_fit(x, A, 0, 0, alpha, 0, 0, 0, 0), signal[:, 0], signal[:, 1], p0=thermal_p0, bounds=thermal_bounds)
+    A, alpha = popt
+    
+    # Lorentzian fit on FFT of SAW signal
+    saw_signal = np.column_stack([
+        signal[:, 0], 
+        signal[:, 1] - thermal_fit(signal[:, 0], A, 0, 0, alpha, 0, 0, 0, 0)
+    ])
+    fft_signal = fft(saw_signal, **config['fft'])
+    f, _, _, tau, _ = lorentzian_fit(fft_signal, **config['lorentzian'])
 
-                for prefix in ['prefit', 'postfit']:
-                    data = locals()[prefix]
-                    data['SAW_speed[m/s]'] = data['SAW_freq[Hz]'] * data['grating_value[um]'] * 1e-6
-                    data['SAW_speed_error[m/s]'] = data['SAW_freq_error[Hz]'] * data['grating_value[um]'] * 1e-6
+    # Iteratively fit beta (displacement-reflectance ratio)
+    q = 2 * np.pi / (grating_spacing * 1e-6)
+    for _ in range(10):
+        displacement = q * np.sqrt(alpha / np.pi)
+        reflectance = (q ** 2 * alpha + 1 / (2 * max_time))
+        beta = displacement / reflectance
+        popt, _ = curve_fit(lambda x, A, alpha: thermal_fit(x, A, 0, 0, alpha, beta, 0, 0, 0), signal[start_idx:, 0], signal[start_idx:, 1], p0=thermal_p0, bounds=thermal_bounds)
+        A, alpha = popt
 
-                prefit_data = pd.concat([prefit_data, pd.DataFrame([prefit])], ignore_index=True)
-                postfit_data = pd.concat([postfit_data, pd.DataFrame([postfit])], ignore_index=True)
-
-            except Exception as e:
-                print(f"Could not successfully analyze signal {i}, Error: {e}")
-
-        save_csv(prefit_data, self.prefit_path)
-        save_csv(postfit_data, self.postfit_path)
-        save_json(x_raw, self.x_raw_path)
-        save_json(y_raw, self.y_raw_path)
-        save_json(x_fit, self.x_fit_path)
-        save_json(y_fit, self.y_fit_path)
-
-    @classmethod
-    def run_analysis(cls, config: dict[str, Any], idxs: List[int] = None) -> None:
-        tgs = cls(config)
-        tgs.fit(idxs)
-        tgs.eng.quit()
+    # Functional fit
+    functional_p0 = [0.05, 0.05, 0, alpha, beta, 0, tau, f]
+    popt, pcov = curve_fit(functional_fit, signal[start_idx:, 0], signal[start_idx:, 1], p0=functional_p0, maxfev=10000)
+    A, B, C, alpha, beta, theta, tau, f = popt
+    A_err, B_err, C_err, alpha_err, beta_err, theta_err, tau_err, f_err = np.sqrt(np.diag(pcov))
+    
+    return start_time, grating_spacing, A, A_err, B, B_err, C, C_err, alpha, alpha_err, beta, beta_err, theta, theta_err, tau, tau_err, f, f_err, signal, signal[start_idx:]

@@ -1,14 +1,29 @@
+# Path
+path: data  # directory containing input files
+
+# TGS Fitting
 tgs:
-    cooldown:
-        path: 'data/tgs/Cu_cooldown'
-        temperature_path: data/temperature/Cu_temperature.csv
-        grating: 3.5276
-    irradiation:
-        path: 'data/tgs/Cu_irradiation'
-        srim_path: 'data/srim/VACANCY.txt'
-        grating: 3.5276
-        start_current: 1.0e-9 # A
-        end_current: 0.1e-9 # A
-        ion_charge: 6 # e
-        beam_aperture: 2.00 # mm
-        duration: 2100 # s
+  grating_spacing: 3.5276  # TGS probe grating spacing [µm]
+  plot: false  # enable/disable fit visualization
+
+# Signal Processing
+process:
+  heterodyne: di-homodyne  # detection method: 'di-homodyne' or 'mono-homodyne'
+  null_point: 2  # null point selection (valid range: 1-4)
+  plot: false  # enable/disable processing visualization
+
+# FFT Analysis
+fft:
+  signal_proportion: 0.9  # proportion of signal to analyze (0.0 to 1.0)
+  duplicate_signal: false  # double the signal amplitude for analysis
+  use_derivative: true  # use signal derivative instead of raw signal
+  analysis_type: psd  # analysis method: 'psd' (power spectral density) or 'fft' (fast Fourier transform)
+  plot: false  # enable/disable FFT visualization
+
+# Lorentzian Fitting
+lorentzian:
+  signal_proportion: 1.0  # proportion of signal to use for fitting (0.0 to 1.0)
+  frequency_bounds: [0.1, 0.9]  # frequency range for fitting [GHz]
+  dc_filter_range: [0, 12000]  # DC filtering range [Hz]
+  bimodal_fit: false  # enable bimodal Lorentzian fitting
+  plot: false  # enable/disable fit visualization

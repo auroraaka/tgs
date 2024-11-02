@@ -51,7 +51,7 @@ tgs/
 │   ├── raw/                # Raw experimental data
 │   └── fit/                # Analysis outputs
 ├── figures/
-│   ├── processed/          # Processed signal figures
+│   ├── process/            # Processed signal figures
 │   └── fft/                # FFT analysis figures
 │   └── lorentzian/         # Lorentzian fit figures
 │   └── tgs/                # TGS fit figures

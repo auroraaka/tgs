@@ -6,6 +6,10 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
     """
     Build functional and thermal fit functions.
 
+    Notes:
+        The thermal diffusivity (α) is set to a minimum value of 1e-10 to avoid numerical instability 
+        in the square root term of the displacement field.
+
     Parameters:
         start_time (float): start time of TGS data [s] # TODO: check units
         grating_spacing (float): grating spacing of TGS probe [µm]
@@ -15,7 +19,7 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
     """
     q = 2 * np.pi / (grating_spacing * 1e-6)
 
-    def functional_fit(x, A, B, C, alpha, beta, theta, tau, f, q=q):
+    def functional_function(x, A, B, C, alpha, beta, theta, tau, f, q=q):
         """
         Functional fit function.
 
@@ -38,12 +42,13 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
             np.ndarray: functional fit response [V] # TODO: check units
         """
         t = x + start_time
+        alpha = max(alpha, 1e-10)
         displacement_field = erfc(q * np.sqrt(alpha * t))
         thermal_field = beta / np.sqrt(t) * np.exp(-q ** 2 * alpha * t)
         sinusoid = np.sin(2 * np.pi * f * t + theta) * np.exp(-t / tau)
         return A * (displacement_field + thermal_field) + B * sinusoid + C
 
-    def thermal_fit(x, A, B, C, alpha, beta, theta, tau, f, q=q):
+    def thermal_function(x, A, B, C, alpha, beta, theta, tau, f, q=q):
         """
         Thermal fit function.
 
@@ -62,11 +67,12 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
             np.ndarray: thermal fit response [V] # TODO: check units
         """
         t = x + start_time
+        alpha = max(alpha, 1e-10)
         displacement_field = erfc(q * np.sqrt(alpha * t))
         thermal_field = beta / np.sqrt(t) * np.exp(-q ** 2 * alpha * t)
         return A * (displacement_field + thermal_field) + C
 
-    return functional_fit, thermal_fit
+    return functional_function, thermal_function
 
 def lorentzian_function(x: np.ndarray, A: float, x0: float, W: float, C: float) -> np.ndarray:
     """

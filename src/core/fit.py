@@ -13,10 +13,7 @@ class DataPaths:
     raw_folder: Path
     fit_folder: Path
     fit: Path
-    x_raw: Path
-    y_raw: Path
-    x_fit: Path
-    y_fit: Path
+    signal: Path
 
 class TGSAnalyzer:
     def __init__(self, config: dict[str, Any]) -> None:
@@ -27,18 +24,15 @@ class TGSAnalyzer:
             raw_folder=base_path / 'raw',
             fit_folder=base_path / 'fit',
             fit=base_path / 'fit' / 'fit.csv',
-            x_raw=base_path / 'fit' / 'x_raw.json',
-            y_raw=base_path / 'fit' / 'y_raw.json',
-            x_fit=base_path / 'fit' / 'x_fit.json',
-            y_fit=base_path / 'fit' / 'y_fit.json'
+            signal=base_path / 'fit' / 'signal.json',
         )
 
-    def process_signal(self, pos_file: str, neg_file: str) -> Tuple[pd.DataFrame, List[float], List[float], List[float], List[float]]:
-
-        output = tgs_fit(self.config, pos_file, neg_file, **self.config['tgs'])
-        start_time, grating_spacing, A, A_err, B, B_err, C, C_err, alpha, alpha_err, beta, beta_err, theta, theta_err, tau, tau_err, f, f_err, full_signal, truncated_signal = output
-        x_raw, y_raw = full_signal[:, 0], full_signal[:, 1]
-        x_fit, y_fit = truncated_signal[:, 0], truncated_signal[:, 1]
+    def process_signal(self, pos_file: str, neg_file: str) -> Tuple[pd.DataFrame, List[List[float]], List[List[float]]]:
+        (start_idx, start_time, grating_spacing, 
+         A, A_err, B, B_err, C, C_err, 
+         alpha, alpha_err, beta, beta_err, 
+         theta, theta_err, tau, tau_err, 
+         f, f_err, signal) = tgs_fit(self.config, pos_file, neg_file, **self.config['tgs'])
 
         params = {
             'A': (A, A_err, 'Wm^-2'),
@@ -53,17 +47,18 @@ class TGSAnalyzer:
 
         data = {
             'run_name': Path(pos_file).name,
+            'start_idx': start_idx,
             'start_time': start_time,
             'grating_value[um]': grating_spacing,
             **{f'{name}[{unit}]': value for name, (value, _, unit) in params.items()},
             **{f'{name}_err[{unit}]': error for name, (_, error, unit) in params.items()},
         }
 
-        return pd.DataFrame([data]), x_raw.tolist(), y_raw.tolist(), x_fit.tolist(), y_fit.tolist()
+        return pd.DataFrame([data]), signal.tolist()
 
     def process_all(self, idxs: List[int] = None) -> None:
         fit_data = pd.DataFrame()
-        signals = {key: [] for key in ['x_raw', 'y_raw', 'x_fit', 'y_fit']}
+        signals = []
 
         if idxs is None:
             num_signals = get_num_signals(self.paths.raw_folder)
@@ -78,15 +73,12 @@ class TGSAnalyzer:
             pos_file = self.paths.raw_folder / f'{file_prefix}-POS-{i}.txt'
             neg_file = self.paths.raw_folder / f'{file_prefix}-NEG-{i}.txt'
             
-            df, xr, yr, xf, yf = self.process_signal(pos_file, neg_file)
-            for data, key in zip([xr, yr, xf, yf], signals.keys()):
-                signals[key].append(data)
+            df, signal = self.process_signal(pos_file, neg_file)
+            signals.append(signal)
             fit_data = pd.concat([fit_data, df], ignore_index=True)
 
         fit_data.to_csv(self.paths.fit, index=False)
-        for key, data in signals.items():
-            path = getattr(self.paths, key)
-            path.write_text(json.dumps(data))
+        with open(self.paths.signal, 'w') as f: json.dump(signals, f)
 
     @classmethod
     def run_analysis(cls, config: dict[str, Any], idxs: List[int] = None) -> None:

@@ -4,8 +4,9 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from src.analysis.functions import lorentzian_function
+from src.visualization.plots import plot_fft_lorentzian
 
-def lorentzian_fit(fft: np.ndarray, signal_proportion: float = 1.0, frequency_bounds: List[Union[float, float]] = [0.1, 0.9], dc_filter_range: List[Union[int, int]] = [0, 12000], bimodal_fit: bool = False, plot: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
+def lorentzian_fit(fft: np.ndarray, file_idx: int, signal_proportion: float = 1.0, frequency_bounds: List[Union[float, float]] = [0.1, 0.9], dc_filter_range: List[Union[int, int]] = [0, 12000], bimodal_fit: bool = False, plot: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
     """
     Fit Lorentzian peak to FFT signal.
 
@@ -15,6 +16,7 @@ def lorentzian_fit(fft: np.ndarray, signal_proportion: float = 1.0, frequency_bo
 
     Parameters:
         fft (np.ndarray): FFT signal array of shape (N, 2) containing frequency and amplitude
+        file_idx (int): file index
         signal_proportion (float, optional): proportion of signal to include in fit
         frequency_range (List[float], optional): [min, max] frequency bounds for fitting [GHz]
         dc_filter_range (List[int], optional): [start, end] indices for DC filtering
@@ -92,5 +94,8 @@ def lorentzian_fit(fft: np.ndarray, signal_proportion: float = 1.0, frequency_bo
     signal_power = np.mean(fft[:, 1] ** 2)
     noise_power = np.mean(fft_noise[:, 1] ** 2)
     snr = 10 * np.log10(signal_power / noise_power)
+
+    if plot:
+        plot_fft_lorentzian(fft[neg_idx:pos_idx], lorentzian_function, popt, file_idx)
 
     return saw_frequency, saw_frequency_error, fwhm, tau, snr

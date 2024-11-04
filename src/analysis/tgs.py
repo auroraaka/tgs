@@ -8,7 +8,6 @@ from src.analysis.functions import tgs_function
 from src.analysis.lorentzian import lorentzian_fit
 from src.analysis.fft import fft
 from src.visualization.plots import plot_tgs
-from src.utils.utils import get_file_idx
 
 
 def tgs_fit(config: dict, pos_file: str, neg_file: str, grating_spacing: float, plot: bool = False) -> Tuple[Union[float, np.ndarray]]:
@@ -55,22 +54,22 @@ def tgs_fit(config: dict, pos_file: str, neg_file: str, grating_spacing: float, 
             4. Functional fit including thermal and acoustic components
     """
     # Process signal and build fit functions
-    signal, max_time, start_time, start_idx = process_signal(pos_file, neg_file, grating_spacing, **config['process'])
-    functional_fit, thermal_fit = tgs_function(start_time, grating_spacing)
+    signal, max_time, start_time, start_idx, file_idx = process_signal(pos_file, neg_file, grating_spacing, **config['process'])
+    functional_function, thermal_function = tgs_function(start_time, grating_spacing)
 
     # Thermal fit
     thermal_p0 = [0.05, 5e-6]
     thermal_bounds = ([0, 0], [1, 5e-4])
-    popt, _ = curve_fit(lambda x, A, alpha: thermal_fit(x, A, 0, 0, alpha, 0, 0, 0, 0), signal[:, 0], signal[:, 1], p0=thermal_p0, bounds=thermal_bounds)
+    popt, _ = curve_fit(lambda x, A, alpha: thermal_function(x, A, 0, 0, alpha, 0, 0, 0, 0), signal[:, 0], signal[:, 1], p0=thermal_p0, bounds=thermal_bounds)
     A, alpha = popt
     
     # Lorentzian fit on FFT of SAW signal
     saw_signal = np.column_stack([
         signal[:, 0], 
-        signal[:, 1] - thermal_fit(signal[:, 0], A, 0, 0, alpha, 0, 0, 0, 0)
+        signal[:, 1] - thermal_function(signal[:, 0], A, 0, 0, alpha, 0, 0, 0, 0)
     ])
     fft_signal = fft(saw_signal, **config['fft'])
-    f, _, _, tau, _ = lorentzian_fit(fft_signal, **config['lorentzian'])
+    f, _, _, tau, _ = lorentzian_fit(fft_signal, file_idx, **config['lorentzian'])
 
     # Iteratively fit beta (displacement-reflectance ratio)
     q = 2 * np.pi / (grating_spacing * 1e-6)
@@ -78,16 +77,16 @@ def tgs_fit(config: dict, pos_file: str, neg_file: str, grating_spacing: float, 
         displacement = q * np.sqrt(alpha / np.pi)
         reflectance = (q ** 2 * alpha + 1 / (2 * max_time))
         beta = displacement / reflectance
-        popt, _ = curve_fit(lambda x, A, alpha: thermal_fit(x, A, 0, 0, alpha, beta, 0, 0, 0), signal[start_idx:, 0], signal[start_idx:, 1], p0=thermal_p0, bounds=thermal_bounds)
+        popt, _ = curve_fit(lambda x, A, alpha: thermal_function(x, A, 0, 0, alpha, beta, 0, 0, 0), signal[start_idx:, 0], signal[start_idx:, 1], p0=thermal_p0, bounds=thermal_bounds)
         A, alpha = popt
 
     # Functional fit
     functional_p0 = [0.05, 0.05, 0, alpha, beta, 0, tau, f]
-    popt, pcov = curve_fit(functional_fit, signal[start_idx:, 0], signal[start_idx:, 1], p0=functional_p0, maxfev=10000)
+    popt, pcov = curve_fit(functional_function, signal[start_idx:, 0], signal[start_idx:, 1], p0=functional_p0, maxfev=10000)
     A, B, C, alpha, beta, theta, tau, f = popt
     A_err, B_err, C_err, alpha_err, beta_err, theta_err, tau_err, f_err = np.sqrt(np.diag(pcov))
 
     if plot:
-        plot_tgs(signal, signal[start_idx:], functional_fit, thermal_fit, popt, get_file_idx(pos_file))
+        plot_tgs(signal, start_idx, functional_function, thermal_function, popt, file_idx)
 
-    return start_time, grating_spacing, A, A_err, B, B_err, C, C_err, alpha, alpha_err, beta, beta_err, theta, theta_err, tau, tau_err, f, f_err, signal, signal[start_idx:]
+    return start_idx, start_time, grating_spacing, A, A_err, B, B_err, C, C_err, alpha, alpha_err, beta, beta_err, theta, theta_err, tau, tau_err, f, f_err, signal

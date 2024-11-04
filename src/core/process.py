@@ -2,7 +2,8 @@ from typing import Tuple
 import numpy as np
 from scipy.signal import find_peaks
 
-from src.utils.utils import read_data
+from src.utils.utils import read_data, get_file_idx
+from src.visualization.plots import plot_processed
 
 PROMINENCE_FACTOR = 5
 INITIAL_SAMPLES = 50
@@ -190,7 +191,7 @@ def process_signal(pos_file: str, neg_file: str, grating_spacing: float, heterod
             - start_idx (int): index corresponding to the start time for fitting procedures
             - start_time (float): calculated start time for fitting procedures
     """
-    
+    file_idx = get_file_idx(pos_file)
     pos = read_data(pos_file)
     if heterodyne == 'di-homodyne':
         neg = read_data(neg_file)   
@@ -225,4 +226,7 @@ def process_signal(pos_file: str, neg_file: str, grating_spacing: float, heterod
     max_time = signal[max_idx, 0]
     start_idx, start_time = find_start_time(signal[max_idx:], grating_spacing, time_step, null_point)
 
-    return signal, max_time, start_time, start_idx
+    if plot:
+        plot_processed(signal, max_time, start_time, file_idx)
+
+    return signal, max_time, start_time, start_idx, file_idx

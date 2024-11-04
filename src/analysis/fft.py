@@ -3,7 +3,7 @@ from scipy.signal import periodogram, savgol_filter, windows
 
 NOISE_CUTOFF_POINTS = 1000
 
-def fft(saw_signal: np.ndarray, signal_proportion: float = 0.9, duplicate_signal: bool = False, use_derivative: bool = True, analysis_type: str = 'psd', plot: bool = False) -> np.ndarray:
+def fft(saw_signal: np.ndarray, signal_proportion: float = 0.9, duplicate_signal: bool = False, use_derivative: bool = True, analysis_type: str = 'psd') -> np.ndarray:
     """
     Generates a filtered Fast Fourier Transform of SAW signal.
     

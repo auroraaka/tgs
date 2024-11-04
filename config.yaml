@@ -4,8 +4,8 @@ path: data  # directory containing input files
 # Signal Processing
 process:
   heterodyne: di-homodyne  # detection method: 'di-homodyne' or 'mono-homodyne'
-  null_point: 2  # null point selection (valid range: 1-4)
-  plot: false  # enable/disable processing visualization
+  null_point: 1  # null point selection (valid range: 1-4)
+  plot: true  # enable/disable processing visualization
 
 # FFT Analysis
 fft:
@@ -13,7 +13,6 @@ fft:
   duplicate_signal: false  # double the signal amplitude for analysis
   use_derivative: true  # use signal derivative instead of raw signal
   analysis_type: psd  # analysis method: 'psd' (power spectral density) or 'fft' (fast Fourier transform)
-  plot: false  # enable/disable FFT visualization
 
 # Lorentzian Fitting
 lorentzian:
@@ -21,9 +20,9 @@ lorentzian:
   frequency_bounds: [0.1, 0.9]  # frequency range for fitting [GHz]
   dc_filter_range: [0, 12000]  # DC filtering range [Hz]
   bimodal_fit: false  # enable bimodal Lorentzian fitting
-  plot: false  # enable/disable fit visualization
+  plot: true  # enable/disable FFT and Lorentzian fit visualization
 
 # TGS Fitting
 tgs:
   grating_spacing: 3.5276  # TGS probe grating spacing [µm]
-  plot: true  # enable/disable fit visualization
+  plot: true  # enable/disable TGS fit visualization

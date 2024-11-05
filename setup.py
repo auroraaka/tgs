@@ -9,8 +9,8 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="tgs",
     version="0.1.0",
-    author="Akarsh Aurora",
-    author_email="aaurora@mit.edu",
+    author="",
+    author_email="",
     description="Transient Grating Spectroscopy analysis",
     long_description=long_description,
     long_description_content_type="text/markdown",

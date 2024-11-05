@@ -30,12 +30,11 @@ A repository designed for analyzing transient grating spectroscopy data. This to
 ## Usage
 
 1. Configure Analysis Parameters
-   - Edit `config.yaml` to set your desired parameters
-   - Customize analysis settings based on your experiment requirements
+   - Edit `config.yaml` to set your desired parameters based on your experiment requirements
 
 2. Data Preparation
    - Place raw data files in `data/raw/`
-   - Ensure files match the expected TGS experiment format
+   - Ensure files match the expected TGS experiment format (e.g. `*.txt` files from PI3)
 
 3. Run Analysis
    ```bash
@@ -52,8 +51,7 @@ tgs/
 │   └── fit/                # Analysis outputs
 ├── figures/
 │   ├── process/            # Processed signal figures
-│   └── fft/                # FFT analysis figures
-│   └── lorentzian/         # Lorentzian fit figures
+│   └── fft-lorentzian/     # FFT and Lorentzian fit figures
 │   └── tgs/                # TGS fit figures
 ├── src/                    
 │   ├── analysis/           

@@ -7,11 +7,10 @@ from src.visualization.plots import plot_interactive
 from src.core.fit import TGSAnalyzer
 
 if __name__ == '__main__':
-    with open('config.yaml', "r") as file:
-        config = yaml.safe_load(file)
+    with open('config.yaml', "r") as file: config = yaml.safe_load(file)
+    analyzer = TGSAnalyzer(config)
+    analyzer.run_analysis()
 
-    TGSAnalyzer.run_analysis(config)
-
-    with open('data/fit/signal.json', 'r') as file: signal = json.load(file)
-    fit = pd.read_csv('data/fit/fit.csv')
+    with open(analyzer.paths.signal, 'r') as file: signal = json.load(file)
+    fit = pd.read_csv(analyzer.paths.fit)
     plot_interactive(signal, fit)

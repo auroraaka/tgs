@@ -31,7 +31,7 @@ A Python tool for analyzing transient grating spectroscopy (TGS) data. Process r
 
 1. Edit `config.yaml` to set your data path and desired fitting parameters.
 
-2. Run Analysis
+2. Run analysis script:
    ```bash
    python main.py
    ```

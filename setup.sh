@@ -19,7 +19,7 @@ if ! command -v $PYTHON_CMD &> /dev/null; then
     exit 1
 fi
 
-echo -e "${BLUE}Creating virtual environment for dependencies...${NC}"
+echo -e "${BLUE}Creating virtual environment..${NC}"
 $PYTHON_CMD -m venv tgs-venv
 
 if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
@@ -28,7 +28,7 @@ else
     source tgs-venv/bin/activate
 fi
 
-echo -e "${BLUE}Upgrading pip for installing dependencies...${NC}"
+echo -e "${BLUE}Upgrading pip...${NC}"
 python -m pip install --upgrade pip
 
 echo -e "${BLUE}Installing dependencies...${NC}"

@@ -37,7 +37,7 @@ class TGSAnalyzer:
             'C': (C, C_err, 'Wm^-2'),
             'alpha': (alpha, alpha_err, 'm^2s^-1'),
             'beta': (beta, beta_err, 's^0.5'),
-            'theta': (theta, theta_err, ''),
+            'theta': (theta, theta_err, 'rad'),
             'tau': (tau, tau_err, 's'),
             'f': (f, f_err, 'Hz'),
         }
@@ -46,7 +46,7 @@ class TGSAnalyzer:
             'run_name': Path(pos_file).name,
             'start_idx': start_idx,
             'start_time': start_time,
-            'grating_value[um]': grating_spacing,
+            'grating_value[µm]': grating_spacing,
             **{f'{name}[{unit}]': value for name, (value, _, unit) in params.items()},
             **{f'{name}_err[{unit}]': error for name, (_, error, unit) in params.items()},
         }
@@ -66,10 +66,10 @@ class TGSAnalyzer:
             if not (file_prefix := get_file_prefix(self.paths.data_dir, i)):
                 print(f"Could not find file prefix for signal {i}")
                 continue
-
+            # TODO: plot raw signal under failure case
             pos_file = self.paths.data_dir / f'{file_prefix}-POS-{i}.txt'
             neg_file = self.paths.data_dir / f'{file_prefix}-NEG-{i}.txt'
-            
+
             try:
                 df, signal = self.fit_signal(i, pos_file, neg_file)
                 signals.append(signal)

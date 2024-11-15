@@ -12,7 +12,7 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
         in the square root term of the displacement field.
 
     Parameters:
-        start_time (float): start time of TGS data [ns] # TODO: check units
+        start_time (float): start time of TGS data [s]
         grating_spacing (float): grating spacing of TGS probe [µm]
 
     Returns:
@@ -28,19 +28,19 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
             I(t) = A [erfc(q √(αt)) - (β/√t) e^(-q²αt)] + B sin(2πft + Θ) e^(-t/τ) + C
 
         Parameters:
-            x (np.ndarray): time array [ns]
-            A (float): constant [V] # TODO: check units
-            B (float): constant [V] # TODO: check units
-            C (float): constant [V] # TODO: check units
-            alpha (α) (float): thermal diffusivity [m²/s] # TODO: check units
-            beta (β) (float): displacement-reflectance ratio [dimensionless] # TODO: check units
-            theta (Θ) (float): acoustic phase [rad] # TODO: check units
-            tau (τ) (float): acoustic decay constant [ns] # TODO: check units
-            f (float): surface acoustic wave frequency [Hz] # TODO: check units
-            q (float): excitation wave vector [rad/m] # TODO: check units
+            x (np.ndarray): time array [s]
+            A (float): constant [W/m²]
+            B (float): constant [W/m²]
+            C (float): constant [W/m²]
+            alpha (α) (float): thermal diffusivity [m²/s]
+            beta (β) (float): displacement-reflectance ratio [s⁰⋅⁵]
+            theta (Θ) (float): acoustic phase [rad]
+            tau (τ) (float): acoustic decay constant [s]
+            f (float): surface acoustic wave frequency [Hz]
+            q (float): excitation wave vector [rad/µm]
 
         Returns:
-            np.ndarray: functional fit response [V] # TODO: check units
+            np.ndarray: functional fit response [W/m²]
         """
         t = x + start_time
         alpha = max(alpha, 1e-10)
@@ -57,15 +57,15 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
             I(t) = A [erfc(q √(αt)) - (β/√t) e^(-q²αt)] + C
 
         Parameters:
-            x (np.ndarray): time array [ns] # TODO: check units
-            A (float): constant [V] # TODO: check units
-            C (float): constant [V] # TODO: check units
-            alpha (α) (float): thermal diffusivity [m²/s] # TODO: check units
-            beta (β) (float): thermal conductivity [W/(m·K)] # TODO: check units
-            q (float): excitation wave vector [rad/m] # TODO: check units
+            x (np.ndarray): time array [s]
+            A (float): constant [W/m²]
+            C (float): constant [W/m²]
+            alpha (α) (float): thermal diffusivity [m²/s]
+            beta (β) (float): thermal conductivity [W/(m·K)]
+            q (float): excitation wave vector [rad/µm]
 
         Returns:
-            np.ndarray: thermal fit response [V] # TODO: check units
+            np.ndarray: thermal fit response [W/m²]
         """
         t = x + start_time
         alpha = max(alpha, 1e-10)

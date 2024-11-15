@@ -1,11 +1,12 @@
-# Path
+# TODO
 path: data  # directory containing input files
+idxs: null  # indices of files to fit (null for all)
 
 # Signal Processing
-process:
+signal_process:
   heterodyne: di-homodyne  # detection method: 'di-homodyne' or 'mono-homodyne'
   null_point: 1  # null point selection (valid range: 1-4)
-  plot: true  # enable/disable processing visualization
+  plot: true  # enable/disable processed signal visualization
 
 # FFT Analysis
 fft:

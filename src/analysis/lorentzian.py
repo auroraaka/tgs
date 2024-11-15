@@ -3,10 +3,12 @@ from typing import List, Tuple, Union
 import numpy as np
 from scipy.optimize import curve_fit
 
+from src.core.path import Paths
 from src.analysis.functions import lorentzian_function
-from src.visualization.plots import plot_fft_lorentzian
+from src.core.plots import plot_fft_lorentzian
 
-def lorentzian_fit(fft: np.ndarray, file_idx: int, signal_proportion: float = 1.0, frequency_bounds: List[Union[float, float]] = [0.1, 0.9], dc_filter_range: List[Union[int, int]] = [0, 12000], bimodal_fit: bool = False, plot: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
+
+def lorentzian_fit(paths: Paths, file_idx: int, fft: np.ndarray, signal_proportion: float = 1.0, frequency_bounds: List[Union[float, float]] = [0.1, 0.9], dc_filter_range: List[Union[int, int]] = [0, 12000], bimodal_fit: bool = False, plot: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
     """
     Fit Lorentzian peak to FFT signal.
 
@@ -15,8 +17,9 @@ def lorentzian_fit(fft: np.ndarray, file_idx: int, signal_proportion: float = 1.
     based on a proportion of the peak height.
 
     Parameters:
-        fft (np.ndarray): FFT signal array of shape (N, 2) containing frequency and amplitude
+        paths (Paths): paths to data, figures, and fit files
         file_idx (int): file index
+        fft (np.ndarray): FFT signal array of shape (N, 2) containing frequency and amplitude
         signal_proportion (float, optional): proportion of signal to include in fit
         frequency_range (List[float], optional): [min, max] frequency bounds for fitting [GHz]
         dc_filter_range (List[int], optional): [start, end] indices for DC filtering
@@ -30,6 +33,9 @@ def lorentzian_fit(fft: np.ndarray, file_idx: int, signal_proportion: float = 1.
             - fwhm (np.ndarray): full width at half maximum [Hz]
             - tau (np.ndarray): time constant [s]
             - snr (float): signal-to-noise ratio [dB]
+            - frequency_bounds (List[float, float]): frequency bounds for fitting [GHz]
+            - lorentzian_function (function): Lorentzian function
+            - popt (np.ndarray): optimized Lorentzian fit parameters
     """
     start, end = dc_filter_range
     fft[:, 0] = fft[:, 0] / 1e9
@@ -96,6 +102,6 @@ def lorentzian_fit(fft: np.ndarray, file_idx: int, signal_proportion: float = 1.
     snr = 10 * np.log10(signal_power / noise_power)
 
     if plot:
-        plot_fft_lorentzian(fft[neg_idx:pos_idx], lorentzian_function, popt, file_idx)
+        plot_fft_lorentzian(paths, file_idx, fft[neg_idx:pos_idx], frequency_bounds, lorentzian_function, popt)
 
-    return saw_frequency, saw_frequency_error, fwhm, tau, snr
+    return saw_frequency, saw_frequency_error, fwhm, tau, snr, frequency_bounds, lorentzian_function, popt

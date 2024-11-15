@@ -6,33 +6,30 @@ from pathlib import Path
 import pandas as pd
 
 from src.analysis.tgs import tgs_fit
-from src.utils.utils import get_num_signals, get_file_prefix
-
-@dataclass
-class DataPaths:
-    raw_folder: Path
-    fit_folder: Path
-    fit: Path
-    signal: Path
+from src.core.utils import get_num_signals, get_file_prefix
+from src.core.path import Paths
 
 class TGSAnalyzer:
     def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
         base_path = Path(config['path'])
-        
-        self.paths = DataPaths(
-            raw_folder=base_path / 'raw',
-            fit_folder=base_path / 'fit',
-            fit=base_path / 'fit' / 'fit.csv',
-            signal=base_path / 'fit' / 'signal.json',
+        self.paths = Paths(
+            data_dir=base_path,
+            figure_dir=base_path / 'figures',
+            fit_dir=base_path / 'fit',
+            fit_path=base_path / 'fit' / 'fit.csv',
+            signal_path=base_path / 'fit' / 'signal.json',
         )
+        self.paths.fit_dir.mkdir(parents=True, exist_ok=True)
+        self.paths.figure_dir.mkdir(parents=True, exist_ok=True)
+        self.idxs = config['idxs']
 
-    def process_signal(self, pos_file: str, neg_file: str) -> Tuple[pd.DataFrame, List[List[float]], List[List[float]]]:
+    def fit_signal(self, file_idx: int, pos_file: str, neg_file: str) -> Tuple[pd.DataFrame, List[List[float]], List[List[float]]]:
         (start_idx, start_time, grating_spacing, 
          A, A_err, B, B_err, C, C_err, 
          alpha, alpha_err, beta, beta_err, 
          theta, theta_err, tau, tau_err, 
-         f, f_err, signal) = tgs_fit(self.config, pos_file, neg_file, **self.config['tgs'])
+         f, f_err, signal) = tgs_fit(self.config, self.paths, file_idx, pos_file, neg_file, **self.config['tgs'])
 
         params = {
             'A': (A, A_err, 'Wm^-2'),
@@ -56,31 +53,32 @@ class TGSAnalyzer:
 
         return pd.DataFrame([data]), signal.tolist()
 
-    def process_all(self, idxs: List[int] = None) -> None:
+    def fit(self) -> None:
         fit_data = pd.DataFrame()
         signals = []
 
-        if idxs is None:
-            num_signals = get_num_signals(self.paths.raw_folder)
-            idxs = range(1, num_signals + 1)
+        if self.idxs is None:
+            num_signals = get_num_signals(self.paths.data_dir)
+            self.idxs = range(1, num_signals + 1)
 
-        for i in idxs:
+        for i in self.idxs:
             print(f"Analyzing signal {i}")
-            if not (file_prefix := get_file_prefix(self.paths.raw_folder, i)):
+            if not (file_prefix := get_file_prefix(self.paths.data_dir, i)):
                 print(f"Could not find file prefix for signal {i}")
                 continue
 
-            pos_file = self.paths.raw_folder / f'{file_prefix}-POS-{i}.txt'
-            neg_file = self.paths.raw_folder / f'{file_prefix}-NEG-{i}.txt'
+            pos_file = self.paths.data_dir / f'{file_prefix}-POS-{i}.txt'
+            neg_file = self.paths.data_dir / f'{file_prefix}-NEG-{i}.txt'
             
-            df, signal = self.process_signal(pos_file, neg_file)
-            signals.append(signal)
-            fit_data = pd.concat([fit_data, df], ignore_index=True)
+            try:
+                df, signal = self.fit_signal(i, pos_file, neg_file)
+                signals.append(signal)
+                fit_data = pd.concat([fit_data, df], ignore_index=True)
+            except Exception as e:
+                print(f"Error fitting signal {i}: {e}")
+                continue
 
-        fit_data.to_csv(self.paths.fit, index=False)
-        with open(self.paths.signal, 'w') as f: json.dump(signals, f)
+        fit_data.to_csv(self.paths.fit_path, index=False)
+        with open(self.paths.signal_path, 'w') as f: json.dump(signals, f)
 
-    @classmethod
-    def run_analysis(cls, config: dict[str, Any], idxs: List[int] = None) -> None:
-        tgs = cls(config)
-        tgs.process_all(idxs)
+        # TODO: fit summary

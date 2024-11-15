@@ -1,4 +1,5 @@
 from typing import Tuple
+
 import numpy as np
 from scipy.special import erfc
 
@@ -11,7 +12,7 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
         in the square root term of the displacement field.
 
     Parameters:
-        start_time (float): start time of TGS data [s] # TODO: check units
+        start_time (float): start time of TGS data [ns] # TODO: check units
         grating_spacing (float): grating spacing of TGS probe [µm]
 
     Returns:
@@ -27,14 +28,14 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
             I(t) = A [erfc(q √(αt)) - (β/√t) e^(-q²αt)] + B sin(2πft + Θ) e^(-t/τ) + C
 
         Parameters:
-            x (np.ndarray): time array [s] # TODO: check units
+            x (np.ndarray): time array [ns]
             A (float): constant [V] # TODO: check units
             B (float): constant [V] # TODO: check units
             C (float): constant [V] # TODO: check units
             alpha (α) (float): thermal diffusivity [m²/s] # TODO: check units
             beta (β) (float): displacement-reflectance ratio [dimensionless] # TODO: check units
             theta (Θ) (float): acoustic phase [rad] # TODO: check units
-            tau (τ) (float): acoustic decay constant [s] # TODO: check units
+            tau (τ) (float): acoustic decay constant [ns] # TODO: check units
             f (float): surface acoustic wave frequency [Hz] # TODO: check units
             q (float): excitation wave vector [rad/m] # TODO: check units
 
@@ -56,7 +57,7 @@ def tgs_function(start_time: float, grating_spacing: float) -> Tuple[callable, c
             I(t) = A [erfc(q √(αt)) - (β/√t) e^(-q²αt)] + C
 
         Parameters:
-            x (np.ndarray): time array [s] # TODO: check units
+            x (np.ndarray): time array [ns] # TODO: check units
             A (float): constant [V] # TODO: check units
             C (float): constant [V] # TODO: check units
             alpha (α) (float): thermal diffusivity [m²/s] # TODO: check units

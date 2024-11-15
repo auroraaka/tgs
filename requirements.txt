@@ -1,13 +1,9 @@
+pyyaml
+
 numpy
 pandas
 scipy
-scikit-learn
-sympy
 
 matplotlib
-brokenaxes
 plotly
 dash
-
-pyyaml
-pyserial

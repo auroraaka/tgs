@@ -3,8 +3,8 @@ import json
 import yaml
 import pandas as pd
 
-from src.core.plots import plot_interactive
 from src.core.fit import TGSAnalyzer
+from src.core.plots import plot_interactive
 
 if __name__ == '__main__':
 

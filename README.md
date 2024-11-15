@@ -35,4 +35,4 @@ A Python tool for analyzing transient grating spectroscopy (TGS) data. Process r
    ```bash
    python main.py
    ```
-   Fitting results and figures will be saved in `fit/` and `figures/` directories, respectively.
+   Fitting results and figures will be saved in `fit/` and `figures/` directories, respectively. You can view an example in `data/`.

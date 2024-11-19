@@ -198,7 +198,7 @@ def create_app(signal_data, fit):
         fit_params = [float(fit_dict[key]) for key in param_keys]
         start_idx = fit_dict['start_idx']
 
-        start_time, grating = fit_dict['start_time'], fit_dict['grating_value[um]']
+        start_time, grating = fit_dict['start_time'], fit_dict['grating_spacing[µm]']
         functional_function, thermal_function = tgs_function(start_time, grating)
         fig = make_subplots(rows=1, cols=1)
         

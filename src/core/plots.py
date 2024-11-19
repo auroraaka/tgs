@@ -41,6 +41,7 @@ def plot_tgs(paths, file_idx, signal, start_idx, functional_function, thermal_fu
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / f'tgs-{file_idx:04d}.png'
     plt.savefig(save_path, dpi=600)
+    plt.close()
 
 def plot_fft_lorentzian(paths, file_idx, fft, frequency_bounds, lorentzian_function, popt):
     frequencies, amplitudes = fft[:, 0], fft[:, 1]
@@ -73,7 +74,7 @@ def plot_fft_lorentzian(paths, file_idx, fft, frequency_bounds, lorentzian_funct
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / f'fft-lorentzian-{file_idx:04d}.png'
     plt.savefig(save_path, dpi=600)
-
+    plt.close()
 def plot_signal_processed(paths, file_idx, signal, max_time, start_time):
     time, amplitude = signal[:NUM_POINTS, 0], signal[:NUM_POINTS, 1]
     
@@ -100,6 +101,7 @@ def plot_signal_processed(paths, file_idx, signal, max_time, start_time):
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / f'signal-processed-{file_idx:04d}.png'
     plt.savefig(save_path, dpi=600)
+    plt.close()
 
 def plot_combined(paths, file_idx, signal, max_time, start_time, start_idx, functional_function, thermal_function, tgs_popt,
                  fft, frequency_bounds, lorentzian_function, lorentzian_popt):
@@ -158,6 +160,7 @@ def plot_combined(paths, file_idx, signal, max_time, start_time, start_idx, func
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / f'combined-{file_idx:04d}.png'
     plt.savefig(save_path, dpi=600, bbox_inches='tight')
+    plt.close()
 
 def create_app(signal_data, fit):
     app = dash.Dash(__name__)
@@ -228,9 +231,7 @@ def create_app(signal_data, fit):
             legend_title='Fit Type',
             height=600
         )
-
         return fig, f'Viewing Signal {idx + 1} of {num_plots}'
-
     return app
 
 def plot_interactive(signal_data, fit):

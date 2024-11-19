@@ -46,7 +46,7 @@ class TGSAnalyzer:
             'run_name': Path(pos_file).name,
             'start_idx': start_idx,
             'start_time': start_time,
-            'grating_value[µm]': grating_spacing,
+            'grating_spacing[µm]': grating_spacing,
             **{f'{name}[{unit}]': value for name, (value, _, unit) in params.items()},
             **{f'{name}_err[{unit}]': error for name, (_, error, unit) in params.items()},
         }

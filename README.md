@@ -4,8 +4,8 @@ A Python tool for analyzing transient grating spectroscopy (TGS) signals. Proces
 
 ## Prerequisites
 
-- Python 3.8 or higher
-- Git (for cloning the repository)
+- Python 3.8 - 3.12 ([download](https://www.python.org/downloads/))
+- Git ([download](https://git-scm.com/downloads))
 
 ## Installation
 
@@ -64,4 +64,4 @@ A Python tool for analyzing transient grating spectroscopy (TGS) signals. Proces
    ```
 
    Fitting results and figures will be saved in `fit/` and `figures/` directories, respectively.
-   You can view example input/output files in the `data/` directory.
+   You can view example input/output files in the `example/` directory.

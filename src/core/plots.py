@@ -14,6 +14,7 @@ from src.core.path import Paths
 matplotlib.rcParams['font.family'] = 'Times New Roman'
 matplotlib.rcParams['font.sans-serif'] = ['Times New Roman']
 
+# TODO: automatically scale graph size
 NUM_POINTS = 1000
 
 def plot_tgs(paths, file_idx, signal, start_idx, functional_function, thermal_function, fit_params):

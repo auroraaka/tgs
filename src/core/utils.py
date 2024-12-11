@@ -26,31 +26,42 @@ def read_data(file_path: str, header_length: int = 15) -> np.ndarray:
     
     return np.column_stack((time_data, amplitude_data))
 
-def get_num_signals(path: Path) -> int:
+# TODO: fix study name
+def get_num_signals(path: Path) -> dict[str, int]:
     """
-    Get the number of positive signal files in the given path.
+    Get the number of positive signal files for each study in the given path.
 
     Parameters:
-        path (str): path to the directory containing the positive signal files
+        path (str): path to the directory containing the signal files
     Returns:
-        int: number of positive signal files
+        dict[str, int]: dictionary mapping study names to their maximum signal index
     """
-    pattern = re.compile(r'.*-POS-(\d+)\.txt$')
-    matches = [int(match.group(1)) for filename in path.iterdir()
-              if (match := pattern.search(filename.name))]
-    return max(matches, default=0)
+    pattern = re.compile(r'.*-(\w+)-((?:POS|NEG)-\d+)\.txt$')
+    
+    study_indices = {}
+    for filename in path.iterdir():
+        if match := pattern.search(filename.name):
+            study_name = match.group(1)
+            index = int(match.group(2).split('-')[-1])
+            
+            if study_name not in study_indices:
+                study_indices[study_name] = set()
+            study_indices[study_name].add(index)
+            
+    return {study: max(indices) for study, indices in study_indices.items()}
 
-def get_file_prefix(path: Path, i: int) -> str:
+def get_file_prefix(path: Path, i: int, study_name: str) -> str:
     """
-    Get the file prefix of the positive signal file with the given index.
+    Get the file prefix of the signal file with the given index and study name.
 
     Parameters:
-        path (str): path to the directory containing the positive signal files
-        i (int): index of the positive signal file
+        path (str): path to the directory containing the signal files
+        i (int): index of the signal file
+        study_name (str): name of the study
     Returns:
         str: file prefix
     """
-    pattern = re.compile(rf'(.+)-POS-{i}\.txt')
+    pattern = re.compile(rf'(.+)-{study_name}-((?:POS|NEG)-{i})\.txt')
     for filename in path.iterdir():
         if match := pattern.match(filename.name):
             return match.group(1)

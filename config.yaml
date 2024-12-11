@@ -1,17 +1,17 @@
 # TODO
-path: data  # directory containing input files
-idxs: null  # indices of files to fit (null for all)
+path: example  # directory containing input files
+study_names: ['cooldown']  # names of studies to fit (null for all or list of strings e.g. ['spot00', 'spot01'])
+idxs: null  # indices of files to fit (null for all or list of indices e.g. [1, 2, 3])
 
 # Signal Processing
 signal_process:
   heterodyne: di-homodyne  # detection method: 'di-homodyne' or 'mono-homodyne'
-  null_point: 1  # null point selection (valid range: 1-4)
+  null_point: 2  # null point selection (valid range: 1-4)
   plot: true  # enable/disable processed signal visualization
 
 # FFT Analysis
 fft:
   signal_proportion: 0.9  # proportion of signal to analyze (0.0 to 1.0)
-  duplicate_signal: false  # double the signal amplitude for analysis
   use_derivative: true  # use signal derivative instead of raw signal
   analysis_type: psd  # analysis method: 'psd' (power spectral density) or 'fft' (fast Fourier transform)
 

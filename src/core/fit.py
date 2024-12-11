@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 
 from src.analysis.tgs import tgs_fit
 from src.core.utils import get_num_signals, get_file_prefix
@@ -22,7 +23,19 @@ class TGSAnalyzer:
         )
         self.paths.fit_dir.mkdir(parents=True, exist_ok=True)
         self.paths.figure_dir.mkdir(parents=True, exist_ok=True)
-        self.idxs = config['idxs']
+        
+        study_signals = get_num_signals(self.paths.data_dir)
+        if config['study_names'] is not None:
+            study_signals = {study: max_idx 
+                            for study, max_idx in study_signals.items() 
+                            if study in config['study_names']}
+        
+        if config['idxs'] is not None:
+            self.idxs = config['idxs']
+        else:
+            self.idxs = [(study, idx) 
+                         for study, max_idx in study_signals.items() 
+                         for idx in range(1, max_idx + 1)]
 
     def fit_signal(self, file_idx: int, pos_file: str, neg_file: str) -> Tuple[pd.DataFrame, List[List[float]], List[List[float]]]:
         (start_idx, start_time, grating_spacing, 
@@ -56,29 +69,109 @@ class TGSAnalyzer:
     def fit(self) -> None:
         fit_data = pd.DataFrame()
         signals = []
+        fails = []
 
         if self.idxs is None:
-            num_signals = get_num_signals(self.paths.data_dir)
-            self.idxs = range(1, num_signals + 1)
-
-        for i in self.idxs:
-            print(f"Analyzing signal {i}")
-            if not (file_prefix := get_file_prefix(self.paths.data_dir, i)):
-                print(f"Could not find file prefix for signal {i}")
+            study_signals = get_num_signals(self.paths.data_dir)
+            self.idxs = [(study, idx) 
+                         for study, max_idx in study_signals.items() 
+                         for idx in range(1, max_idx + 1)]
+        
+        for study_name, i in self.idxs:
+            print(f"Analyzing {study_name} signal {i}")
+            if not (file_prefix := get_file_prefix(self.paths.data_dir, i, study_name)):
+                msg = f"Could not find file prefix for signal {i} in study {study_name}"
+                print(msg)
+                fails.append((study_name, i, msg))
                 continue
-            # TODO: plot raw signal under failure case
-            pos_file = self.paths.data_dir / f'{file_prefix}-POS-{i}.txt'
-            neg_file = self.paths.data_dir / f'{file_prefix}-NEG-{i}.txt'
+
+            pos_file = self.paths.data_dir / f'{file_prefix}-{study_name}-POS-{i}.txt'
+            neg_file = self.paths.data_dir / f'{file_prefix}-{study_name}-NEG-{i}.txt'
 
             try:
                 df, signal = self.fit_signal(i, pos_file, neg_file)
                 signals.append(signal)
                 fit_data = pd.concat([fit_data, df], ignore_index=True)
             except Exception as e:
-                print(f"Error fitting signal {i}: {e}")
+                msg = f"Error fitting signal {i} from study {study_name}: {str(e)}"
+                print(msg)
+                fails.append((study_name, i, msg))
                 continue
 
         fit_data.to_csv(self.paths.fit_path, index=False)
-        with open(self.paths.signal_path, 'w') as f: json.dump(signals, f)
+        with open(self.paths.signal_path, 'w') as f:
+            json.dump(signals, f)
+    
+        self.fit_summary(fails)
 
-        # TODO: fit summary
+    def fit_summary(self, fails: List[Tuple[str, int, str]] = None) -> None:
+        if not self.paths.fit_path.exists():
+            print("No fit data found. Please run fit() first.")
+            return
+
+        fit_data = pd.read_csv(self.paths.fit_path)
+        param_cols = [col for col in fit_data.columns 
+                     if any(param in col for param in ['A[', 'B[', 'C[', 'alpha[', 'beta[', 'theta[', 'tau[', 'f['])
+                     and not 'err' in col]
+        
+        summary = []
+        for param in param_cols:
+            values = fit_data[param].values
+            param_base = param.split('[')[0]
+            unit = param.split('[')[1]
+            error_col = f"{param_base}_err[{unit}"
+            errors = fit_data[error_col].values
+            weights = 1 / (errors ** 2)
+            weighted_mean = np.average(values, weights=weights)
+            weighted_std = np.sqrt(np.average((values - weighted_mean) ** 2, weights=weights))
+            
+            summary.append({
+                'Parameter': param,
+                'Mean': weighted_mean,
+                'Std': weighted_std,
+                'Min': np.min(values),
+                'Max': np.max(values),
+                'Relative Error (%)': np.mean(errors / np.abs(values)) * 100
+            })
+        
+        summary_df = pd.DataFrame(summary)
+        summary_df = summary_df.set_index('Parameter')
+        
+        print("\nFit Summary:")
+        print("-" * 80)
+        print(f"Total signals attempted: {len(fit_data) + len(fails if fails else [])}")
+        print(f"Successful fits: {len(fit_data)}")
+        print(f"Failed fits: {len(fails) if fails else 0}")
+        
+        if fails:
+            print("\nFailed Fits:")
+            for study, idx, error in fails:
+                print(f"- Study: {study}, Signal: {idx}")
+                print(f"  Error: {error}")
+        
+        if 'grating_spacing[µm]' in fit_data.columns:
+            print(f"\nGrating spacing: {fit_data['grating_spacing[µm]'].iloc[0]:.4f} µm")
+        print("\nParameter Statistics:")
+        print(summary_df.round(6).to_string())
+        
+        summary_path = self.paths.fit_dir / 'summary.txt'
+        with open(summary_path, 'w') as f:
+            f.write(f"Fit Summary\n")
+            f.write(f"{'=' * 80}\n")
+            f.write(f"Total signals attempted: {len(fit_data) + len(fails if fails else [])}\n")
+            f.write(f"Successful fits: {len(fit_data)}\n")
+            f.write(f"Failed fits: {len(fails) if fails else 0}\n\n")
+            
+            if fails:
+                f.write("Failed Fits:\n")
+                for study, idx, error in fails:
+                    f.write(f"- Study: {study}, Signal: {idx}\n")
+                    f.write(f"  Error: {error}\n")
+                f.write("\n")
+            
+            if 'grating_spacing[µm]' in fit_data.columns:
+                f.write(f"Grating spacing: {fit_data['grating_spacing[µm]'].iloc[0]:.4f} µm\n")
+            f.write("\nParameter Statistics:\n")
+            f.write(f"{'-' * 80}\n")
+            f.write(summary_df.round(6).to_string())
+        

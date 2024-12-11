@@ -1,4 +1,4 @@
-# Transient Grating Spectroscopy Analysis Tool
+# PyTGS
 
 A Python tool for analyzing transient grating spectroscopy (TGS) signals. Process raw signals and extract thermo-mechanical properties through automated analyses and curve fitting.
 

@@ -76,6 +76,7 @@ def plot_fft_lorentzian(paths, file_idx, fft, frequency_bounds, lorentzian_funct
     save_path = save_dir / f'fft-lorentzian-{file_idx:04d}.png'
     plt.savefig(save_path, dpi=600)
     plt.close()
+    
 def plot_signal_processed(paths, file_idx, signal, max_time, start_time):
     time, amplitude = signal[:NUM_POINTS, 0], signal[:NUM_POINTS, 1]
     

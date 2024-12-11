@@ -26,4 +26,5 @@ lorentzian:
 # TGS Fitting
 tgs:
   grating_spacing: 3.5276  # TGS probe grating spacing [µm]
+  maxfev: 100000  # Maximum number of iterations for final functional fit
   plot: true  # enable/disable TGS fit visualization

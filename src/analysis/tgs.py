@@ -10,7 +10,7 @@ from src.analysis.lorentzian import lorentzian_fit
 from src.analysis.functions import tgs_function
 from src.core.plots import plot_tgs, plot_combined
 
-def tgs_fit(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: str, grating_spacing: float, plot: bool = False) -> Tuple[Union[float, np.ndarray]]:
+def tgs_fit(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: str, grating_spacing: float, maxfev: float= 100000, plot: bool = False) -> Tuple[Union[float, np.ndarray]]:
     """
     Fit transient grating spectroscopy (TGS) response equation to experimentally collected signal.
 
@@ -84,7 +84,7 @@ def tgs_fit(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: 
 
     # Functional fit
     functional_p0 = [0.05, 0.05, 0, alpha, beta, 0, tau, f]
-    tgs_popt, tgs_pcov = curve_fit(functional_function, signal[start_idx:, 0], signal[start_idx:, 1], p0=functional_p0, maxfev=100000)
+    tgs_popt, tgs_pcov = curve_fit(functional_function, signal[start_idx:, 0], signal[start_idx:, 1], p0=functional_p0, maxfev=maxfev)
     A, B, C, alpha, beta, theta, tau, f = tgs_popt
     A_err, B_err, C_err, alpha_err, beta_err, theta_err, tau_err, f_err = np.sqrt(np.diag(tgs_pcov))
 

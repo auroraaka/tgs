@@ -10,7 +10,7 @@ from src.analysis.lorentzian import lorentzian_fit
 from src.analysis.functions import tgs_function
 from src.core.plots import plot_tgs, plot_combined
 
-def tgs_fit(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: str, grating_spacing: float, maxfev: float= 100000, plot: bool = False) -> Tuple[Union[float, np.ndarray]]:
+def tgs_fit(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: str, grating_spacing: float, signal_proportion: float= 0.9, maxfev: float= 100000, plot: bool = False) -> Tuple[Union[float, np.ndarray]]:
     """
     Fit transient grating spectroscopy (TGS) response equation to experimentally collected signal.
 
@@ -57,12 +57,12 @@ def tgs_fit(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: 
     """
     # Process signal and build fit functions
     signal, max_time, start_time, start_idx = process_signal(paths, file_idx, pos_file, neg_file, grating_spacing, **config['signal_process'])
+    end_idx = int(len(signal) * signal_proportion) + start_idx
     functional_function, thermal_function = tgs_function(start_time, grating_spacing)
 
     # Thermal fit
     thermal_p0 = [0.05, 5e-6]
-    thermal_bounds = ([0, 0], [1, 5e-4])
-    popt, _ = curve_fit(lambda x, A, alpha: thermal_function(x, A, 0, 0, alpha, 0, 0, 0, 0), signal[:, 0], signal[:, 1], p0=thermal_p0, bounds=thermal_bounds)
+    popt, _ = curve_fit(lambda x, A, alpha: thermal_function(x, A, 0, 0, alpha, 0, 0, 0, 0), signal[:, 0], signal[:, 1], p0=thermal_p0)
     A, alpha = popt
     
     # Lorentzian fit on FFT of SAW signal
@@ -79,12 +79,12 @@ def tgs_fit(config: dict, paths: Paths, file_idx: int, pos_file: str, neg_file: 
         displacement = q * np.sqrt(alpha / np.pi)
         reflectance = (q ** 2 * alpha + 1 / (2 * max_time))
         beta = displacement / reflectance
-        popt, _ = curve_fit(lambda x, A, alpha: thermal_function(x, A, 0, 0, alpha, beta, 0, 0, 0), signal[start_idx:, 0], signal[start_idx:, 1], p0=thermal_p0, bounds=thermal_bounds)
+        popt, _ = curve_fit(lambda x, A, alpha: thermal_function(x, A, 0, 0, alpha, beta, 0, 0, 0), signal[start_idx:, 0], signal[start_idx:, 1], p0=thermal_p0)
         A, alpha = popt
 
     # Functional fit
     functional_p0 = [0.05, 0.05, 0, alpha, beta, 0, tau, f]
-    tgs_popt, tgs_pcov = curve_fit(functional_function, signal[start_idx:, 0], signal[start_idx:, 1], p0=functional_p0, maxfev=maxfev)
+    tgs_popt, tgs_pcov = curve_fit(functional_function, signal[start_idx:end_idx, 0], signal[start_idx:end_idx, 1], p0=functional_p0, maxfev=maxfev)
     A, B, C, alpha, beta, theta, tau, f = tgs_popt
     A_err, B_err, C_err, alpha_err, beta_err, theta_err, tau_err, f_err = np.sqrt(np.diag(tgs_pcov))
 
